@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Jan 10 14:04:29 2023
+
+@author: mikaleff
+"""
+
+import pandas as pd
+import os
+import glob
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns ; sns.set()
+import warnings
+
+from matplotlib.ticker import PercentFormatter
+from colorama import Fore, Back, Style
+
+warnings.filterwarnings('ignore')
+
+path = os.getcwd()
+print(f"Le répertoire courant est : {path} \n")
+
+#--------------- Récupération des fichier dans un dataframe -------------------
+#fns=glob.glob("*.csv")
+fns=glob.glob('**/*.csv', recursive=True)
+
+df_bigTab = pd.DataFrame(columns=['Code Domaine', 'Domaine', 'Code Pays', 'Pays', 'Code Élément',
+       'Élément', 'Code Produit', 'Produit', 'Code Année', 'Année', 'Unité',
+       'Valeur', 'Symbole', 'Description du Symbole'])
+
+
+nameModificateur=['Code Domaine', 'Domaine', 'Code Pays', 'Pays', 'Code Élément',
+       'Élément', 'Code Produit', 'Produit', 'Code Année', 'Année', 'Unité',
+       'Valeur', 'Symbole', 'Description du Symbole']
+
+
+
+
+#--------------- Construction du big Tableau ----------------------------------
+for fn in fns:
+    fns = fn[13:-4]
+    df=pd.read_csv(fn, names=nameModificateur, header=0)
+    print("\n")  
+    print(f"{Fore.YELLOW}---------------------- Récupération du fichier {fns} --------------------{Style.RESET_ALL}\n")
+    print(f"- {fn:50s} ({df.shape[0]:6d}, {df.shape[1]:2d}) - {Fore.BLACK}{Back.CYAN}{fns}{Style.RESET_ALL} \n")
+    print(f"{Fore.YELLOW}------------------------------------------------------------------------------{Style.RESET_ALL}\n")
+    print("\n")
+    print(f"{Fore.YELLOW}------------------------ Analyse du fichier {fns} ------------------------{Style.RESET_ALL}\n")
+    print(f"{df.describe()}")
+    print("\n")
+    print(f"{Fore.YELLOW}-------------------------------------------------------------------------------{Style.RESET_ALL}\n")
+
+    df_bigTab=df_bigTab.append(df)
+
+#df_bigTab.drop_duplicates(subset ="Pays", keep = 'first', inplace=True)
+
+
+
+#----- parler des variables, qualitative, quantitative
+df_pop=df_bigTab.query('Produit == "Population"').loc[:,["Pays","Produit","Valeur", "Unité"]]
+
+sns.distplot( a=np.log(df_pop["Valeur"]), hist=True, kde=False, rug=False )
+
+#--------------- Nombre d'humains sur la planète ------------------------------
+
+df_pop.sort_values ('Valeur', ascending = True)
+
+pop_planetaire = df_pop['Valeur'].sum()
+print (f"La population mondiale en 2013 est de : {pop_planetaire}")
+#8413993 sans drop_duplicate
+#Le résultat change lorsque l'on enlève les doublons
+
+#--------------- Analyse ------------------------------------------------------
+'''
+#add column to display cumulative percentage
+df_population['cumperc'] = df_population['Valeur'].cumsum()/df_population['Valeur'].sum()*100
+
+#define aesthetics for plot
+color1 = 'steelblue'
+color2 = 'red'
+line_size = 1
+
+#create basic bar plot
+fig, ax = plt.subplots()
+ax.bar(df_population['Pays'], np.log(df_population['Valeur']), color=color1)
+
+#add cumulative percentage line to plot
+ax2 = ax.twinx()
+ax2.plot(df.index, df_population['cumperc'], color=color2, marker="D", ms=line_size)
+ax2.yaxis.set_major_formatter(PercentFormatter())
+
+#specify axis colors
+ax.tick_params(axis='y', colors=color1)
+ax.tick_params(axis='x', labelrotation=90, labelsize=2)
+ax2.tick_params(axis='y', colors=color2, length=50)
+
+#display Pareto chart
+plt.show()
+'''
+
+
+
+#----- Construction d'un tableau de la disponnibilité alimentaire
+
+#SA  => Sous alimentation
+#DA  => Disponnibilité alimentaire (kg/personne/an)
+#DAP => Disponnibilité alimentaire en protéines (g/personne/jour)
+
+df_SA=df_bigTab.query('Produit == "Nombre de personnes sous-alimentées (millions) (moyenne sur 3 ans)"').loc[:,["Pays","Produit", "Valeur", "Unité"]]
+df_DA=df_bigTab.query('Élément == "Disponibilité alimentaire en quantité (kg/personne/an)"').loc[:,["Pays","Produit", "Valeur", "Unité"]]
+df_DAP=df_bigTab.query('Élément == "Disponibilité de protéines en quantité (g/personne/jour)"').loc[:,["Pays","Produit", "Valeur", "Unité"]]
+
+
+df_aliment = df_pop.join(df_SA, rsuffix='_SA')
+df_aliment = df_aliment.join(df_DA, rsuffix='_DA')
+df_aliment = df_aliment.join(df_DAP, rsuffix='_DAP')
+
+df_aliment.drop_duplicates('Produit_DA', inplace=True)
+
+print(df_aliment)
+print(f"{df_aliment.columns} \n")
+print(f"{df_aliment.corr()} \n")
+
+
+
+
