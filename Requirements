@@ -1,1 +1,1 @@
-pandas,os,glob,numpy,matplotlib,
+pandas,os,glob,numpy,matplotlib,seaborn,warnings,colorama
